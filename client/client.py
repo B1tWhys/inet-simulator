@@ -16,8 +16,7 @@ args = parser.parse_args()
 host = args.host
 port = args.port
 
-print(args)
-
+logging.info("starting ping requests", extra=log_context)
 with socket.create_connection((host, port)) as sock:
     while True:
         msg = f"ping from {client_ip}"

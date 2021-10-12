@@ -1,3 +1,3 @@
 #!/bin/bash
 
-docker run --rm -p 8000:8000 bgp-server
+docker run --rm --network bgp-test-1 bgp-server
