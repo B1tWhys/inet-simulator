@@ -17,11 +17,16 @@ host = args.host
 port = args.port
 
 logging.info("starting ping requests", extra=log_context)
-with socket.create_connection((host, port)) as sock:
-    while True:
-        msg = f"ping from {client_ip}"
-        logging.info("sending to %s: %s", host, msg, extra=log_context)
-        sock.send(msg.encode('ascii'))
-        resp = sock.recv(1024)
-        logging.info("received from %s: %s", host, resp.decode('ascii').strip(), extra=log_context)
+while True:
+    try:
+        with socket.create_connection((host, port)) as sock:
+            while True:
+                msg = f"ping from {client_ip}"
+                logging.info("sending to %s: %s", host, msg, extra=log_context)
+                sock.send(msg.encode('ascii'))
+                resp = sock.recv(1024)
+                logging.info("received from %s: %s", host, resp.decode('ascii').strip(), extra=log_context)
+                sleep(1)
+    except Exception as e:
+        logging.info("failed to connect to server", exc_info=e, extra=log_context)
         sleep(1)

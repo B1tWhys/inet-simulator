@@ -1,7 +1,5 @@
-FROM python:3.9.7-alpine
+FROM bgp-base-image
 
-RUN apk add iptables
+ADD ./entrypoint.sh ./client.py ./
 
-ADD ./client.py .
-
-ENTRYPOINT ["python3", "./client.py"]
+ENTRYPOINT ["./entrypoint.sh"]
