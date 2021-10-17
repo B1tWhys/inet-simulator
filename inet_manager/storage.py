@@ -3,14 +3,16 @@ import yaml
 from internet import Internet
 from os import makedirs
 from os.path import join, exists
-from dacite import from_dict
+from prompt_toolkit.history import FileHistory
 
 app_name = 'inet_manager'
 data_dir = user_data_dir(appname=app_name)
 state_file_path = join(data_dir, 'state.yaml')
 makedirs(data_dir, exist_ok=True)
 
-print(state_file_path)
+
+def get_prompt_history():
+    return FileHistory(join(data_dir, 'history'))
 
 
 def save_inet(inet: Internet):
