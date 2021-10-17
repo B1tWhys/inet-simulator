@@ -1,2 +1,6 @@
-prompt_toolkit
-docker
+prompt_toolkit==3.0.20
+docker==5.0.3
+inquirer==2.7.0
+pyyaml==6.0
+appdirs==1.2.0
+dacite==1.6.0
