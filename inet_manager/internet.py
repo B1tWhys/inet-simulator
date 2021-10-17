@@ -1,0 +1,2 @@
+class Internet:
+    pass
