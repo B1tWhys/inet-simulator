@@ -18,10 +18,14 @@ class Internet:
         return as_
 
     def remove_as(self, as_: autonomous_system.AS):
-        self.remove_asn(as_.asn)
+        as_.cleanup_docker_network()
+        del self._autonomous_systems[as_.asn]
 
     def remove_asn(self, asn: int):
-        del self._autonomous_systems[asn]
+        self.remove_as(self.get_as(asn))
+
+    def get_as(self, asn):
+        return self._autonomous_systems[asn]
 
     def _next_as_subnet(self):
         current_subnets = [a.subnet for a in self._autonomous_systems.values()]

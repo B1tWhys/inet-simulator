@@ -101,13 +101,17 @@ class CLI:
         name = self.prompt_for_new_name("enter name for new AS: ", existing_names, default=default_name)
         self.inet.create_as(name)
 
-    def remove_as(self, _):
-        choices = [(a.name, a) for a in self.inet.get_autonomous_systems()]
-        if len(choices) == 0:
-            print("There arent any as's to remove")
-            return
-        answer = inquirer.prompt([inquirer.List('as', message='select as to remove', choices=choices)])
-        self.inet.remove_as(answer['as'])
+    def remove_as(self, as_name):
+        if not as_name:
+            choices = [(a.name, a) for a in self.inet.get_autonomous_systems()]
+            if len(choices) == 0:
+                print("There arent any as's to remove")
+                return
+            answer = inquirer.prompt([inquirer.List('as', message='select as to remove', choices=choices)])
+            as_ = answer['as']
+        else:
+            as_ = next(filter(lambda a: a.name == as_name, self.inet.get_autonomous_systems()))
+        self.inet.remove_as(as_)
 
     def list_autonomous_systems(self, _):
         print_as_table(self.inet.get_autonomous_systems())
