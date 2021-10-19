@@ -1,16 +1,17 @@
-from prompt_toolkit import PromptSession, prompt
+from prompt_toolkit import PromptSession, prompt, ANSI
 from prompt_toolkit import print_formatted_text as print
 from prompt_toolkit.validation import Validator
 from prompt_toolkit.completion import NestedCompleter
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
+from prompt_toolkit.shortcuts import clear
 import traceback
 from printing import *
 from itertools import count
+import inquirer
 
 import docker_utils
 import storage
 from internet import Internet
-import inquirer
 
 
 class CLI:
@@ -18,18 +19,22 @@ class CLI:
 
     def __init__(self):
         self.commands = {
+            'clear': self.clear_screen,
             'docker': {
                 'build': self.rebuild_docker
             },
             'rm': {
-                'as': self.remove_as
+                'as': self.remove_as,
+                'server': self.remove_server
             },
             'new': {
                 'internet': self.create_internet,
+                'server': self.create_server,
                 'as': self.create_as
             },
             'ls': {
                 'as': self.list_autonomous_systems,
+                'servers': self.list_all_servers,
             },
             'save': self.save_inet
         }
@@ -67,6 +72,7 @@ class CLI:
 
     def _eval(self, cmd, tree=None):
         if tree is None:
+            from server import Server
             tree = self.commands
         if cmd.strip() == '':
             return
@@ -92,29 +98,32 @@ class CLI:
     # Command handlers
     #############
 
+    def clear_screen(self, _):
+        clear()
+
     def delete_containers(self, _):
         raise NotImplementedError()
 
     def create_as(self, _):
-        existing_names = {a.name for a in self.inet.get_autonomous_systems()}
+        existing_names = {a.name for a in self.inet.list_autonomous_systems()}
         default_name = f"as-{self.inet.next_asn()}"
         name = self.prompt_for_new_name("enter name for new AS: ", existing_names, default=default_name)
         self.inet.create_as(name)
 
     def remove_as(self, as_name):
         if not as_name:
-            choices = [(a.name, a) for a in self.inet.get_autonomous_systems()]
+            choices = [(a.name, a) for a in self.inet.list_autonomous_systems()]
             if len(choices) == 0:
                 print("There arent any as's to remove")
                 return
             answer = inquirer.prompt([inquirer.List('as', message='select as to remove', choices=choices)])
             as_ = answer['as']
         else:
-            as_ = next(filter(lambda a: a.name == as_name, self.inet.get_autonomous_systems()))
+            as_ = next(filter(lambda a: a.name == as_name, self.inet.list_autonomous_systems()))
         self.inet.remove_as(as_)
 
     def list_autonomous_systems(self, _):
-        print_as_table(self.inet.get_autonomous_systems())
+        print_as_table(self.inet.list_autonomous_systems())
 
     def rebuild_docker(self, _):
         docker_utils.rebuild_imgs()
@@ -139,6 +148,53 @@ class CLI:
 
     def save_inet(self, _):
         storage.save_inet(self.inet)
+
+    def create_server(self, _):
+        as_ = self.select_as('select as to create the server in: ')
+        if as_ is None:
+            print("You need to create an AS first")
+            return
+
+        current_names = [s.name for s in as_.list_servers()]
+        default = self.gen_default_name(f'server{as_.asn}-', current_names)
+        name = self.prompt_for_new_name("enter name for new server: ", existing_names=current_names, default=default)
+        as_.create_server(name)
+
+    def list_all_servers(self, _):
+        servers = [s for a in self.inet.list_autonomous_systems() for s in a.list_servers()]
+        print_server_table(servers)
+
+    def remove_server(self, srv_name):
+        if srv_name is None:
+            server = self.select_server("select server to remove: ")
+        else:
+            servers = self.inet.find_servers(srv_name)
+            if len(servers) > 1:
+                server = self.select_server("select server to remove: ")
+            else:
+                server = servers[0]
+        server.as_.remove_server(server)
+
+    def select_as(self, message):
+        choices = [(a.name, a) for a in self.inet.list_autonomous_systems()]
+        if len(choices) == 0:
+            return None
+        elif len(choices) == 1:
+            print("only one AS exists. I assume you want that one")
+            return choices[0][1]
+        answer = inquirer.prompt([inquirer.List('as', message=message, choices=choices)])
+        as_ = answer['as']
+        return as_
+
+    def select_server(self, message):
+        choices = [(s.name, s) for s in self.inet.get_all_servers()]
+        if len(choices) == 0:
+            return None
+        elif len(choices) == 1:
+            print("only 1 server exists. i assume you want that one")
+            return choices[0][1]
+        answer = inquirer.prompt([inquirer.List('s', message=message, choices=choices)])
+        return answer['s']
 
     @staticmethod
     def prompt_for_new_name(message, existing_names, *args, **kwargs):

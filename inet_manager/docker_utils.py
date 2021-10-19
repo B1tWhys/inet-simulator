@@ -15,6 +15,27 @@ def get_containers():
     return containers
 
 
+def get_container_ip(container_id, as_name) -> str:
+    container = client.containers.get(container_id)
+    container.reload()
+    return container.attrs['NetworkSettings']['Networks'][as_name]['IPAddress']
+
+
+def create_container(command, network_id, name=None, privileged=False, caps=None, environment=None):
+    environment = environment if environment else {}
+    caps = caps if caps else []
+    container = client.containers.run(image='bgp-sandbox',
+                                      name=name,
+                                      cap_add=caps,
+                                      command=command,
+                                      detach=True,
+                                      environment=environment,
+                                      network=network_id,
+                                      privileged=privileged,
+                                      remove=True)
+    return container.short_id
+
+
 def rebuild_imgs():
     built_img = client.images.build(path='../docker', tag='bgp-sandbox')
     print(f"rebuilt {built_img}")
@@ -32,5 +53,12 @@ def remove_network(id):
         client.networks.get(id).remove()
     except docker.errors.NotFound:
         pass
+    except docker.errors.DockerException as e:
+        raise DockerException(e)
+
+
+def remove_container(container_id):
+    try:
+        client.containers.get(container_id).remove(force=True)
     except docker.errors.DockerException as e:
         raise DockerException(e)

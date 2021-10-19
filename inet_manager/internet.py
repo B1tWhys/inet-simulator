@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 import autonomous_system
 from ipaddress import IPv4Network
-
+from server import Server
 
 @dataclass
 class Internet:
@@ -27,6 +27,15 @@ class Internet:
     def get_as(self, asn):
         return self._autonomous_systems[asn]
 
+    def find_servers(self, srv_name):
+        ret = []
+        for a in self.list_autonomous_systems():
+            try:
+                ret.append(a.get_server(srv_name))
+            except KeyError:
+                pass
+        return ret
+
     def _next_as_subnet(self):
         current_subnets = [a.subnet for a in self._autonomous_systems.values()]
         for new in self.subnet.subnets(prefixlen_diff=8):
@@ -34,8 +43,14 @@ class Internet:
             if not any(overlaps):
                 return new
 
-    def get_autonomous_systems(self):
+    def list_autonomous_systems(self):
         return list(self._autonomous_systems.values())
+
+    def get_autonomous_system_names(self):
+        return list(self._autonomous_systems.keys())
+
+    def get_all_servers(self):
+        return [s for a in self.list_autonomous_systems() for s in a.list_servers()]
 
     def next_asn(self):
         current_asns = self._autonomous_systems.keys()
