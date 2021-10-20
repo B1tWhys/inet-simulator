@@ -6,7 +6,8 @@ from os.path import join, exists
 from prompt_toolkit.history import FileHistory
 
 app_name = 'inet_manager'
-data_dir = user_data_dir(appname=app_name)
+# data_dir = user_data_dir(appname=app_name)
+data_dir = '.'
 state_file_path = join(data_dir, 'state.yaml')
 makedirs(data_dir, exist_ok=True)
 
