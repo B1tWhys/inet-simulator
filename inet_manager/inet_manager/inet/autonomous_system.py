@@ -1,9 +1,8 @@
 from dataclasses import dataclass
 from ipaddress import IPv4Network
-import docker_utils
-import traceback
-from server import Server
-from iptables_router import ManuallyConfiguredRouter
+from ..util import docker_utils
+from .server import Server
+from .iptables_router import ManuallyConfiguredRouter
 
 
 @dataclass

@@ -21,7 +21,12 @@ def get_container_ip(container_id, as_name) -> str:
     return container.attrs['NetworkSettings']['Networks'][as_name]['IPAddress']
 
 
-def create_container(command, network_id, name=None, privileged=False, caps=None, environment=None, ipv4_forwarding=False):
+def create_container(command, network_id,
+                     name=None,
+                     privileged=False,
+                     caps=None,
+                     environment=None,
+                     ipv4_forwarding=False):
     sysctls = {'net.ipv4.ip_forward': 1} if ipv4_forwarding else {}
     environment = environment if environment else {}
     caps = caps if caps else ['CAP_NET_ADMIN']
@@ -40,7 +45,7 @@ def create_container(command, network_id, name=None, privileged=False, caps=None
 
 
 def rebuild_imgs():
-    built_img = client.images.build(path='../docker', tag='bgp-sandbox')
+    built_img = client.images.build(path='../../../docker', tag='bgp-sandbox')
     print(f"rebuilt {built_img}")
 
 

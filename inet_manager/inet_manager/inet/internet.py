@@ -1,8 +1,8 @@
 from dataclasses import dataclass, field
 from datetime import datetime
-import autonomous_system
+from . import autonomous_system
 from ipaddress import IPv4Network
-from server import Server
+
 
 @dataclass
 class Internet:

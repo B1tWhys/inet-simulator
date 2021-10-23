@@ -1,6 +1,6 @@
-import docker_utils
+from ..util import docker_utils
 
-from container import BaseContainer
+from .container import BaseContainer
 from dataclasses import dataclass
 from ipaddress import IPv4Address
 

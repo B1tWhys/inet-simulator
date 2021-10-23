@@ -1,6 +1,6 @@
 from dataclasses import dataclass
-from container import BaseContainer
-import docker_utils
+from .container import BaseContainer
+from ..util import docker_utils
 
 
 @dataclass()

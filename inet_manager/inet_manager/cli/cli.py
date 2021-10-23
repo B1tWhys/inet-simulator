@@ -1,17 +1,17 @@
-from prompt_toolkit import PromptSession, prompt, ANSI
+from prompt_toolkit import PromptSession, prompt
 from prompt_toolkit import print_formatted_text as print
 from prompt_toolkit.validation import Validator
 from prompt_toolkit.completion import NestedCompleter
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
 from prompt_toolkit.shortcuts import clear
 import traceback
-from printing import *
 from itertools import count
 import inquirer
 
-import docker_utils
-import storage
-from internet import Internet
+from .printing import *
+
+from ..util import docker_utils, storage
+from ..inet.internet import Internet
 
 
 class CLI:
@@ -74,7 +74,7 @@ class CLI:
 
     def _eval(self, cmd, tree=None):
         if tree is None:
-            from server import Server
+            from inet_manager.inet.server import Server
             tree = self.commands
         if cmd.strip() == '':
             return
@@ -238,6 +238,10 @@ class CLI:
                 return name
 
 
-if __name__ == '__main__':
+def main():
     cli = CLI()
     cli.run()
+
+
+if __name__ == '__main__':
+    main()

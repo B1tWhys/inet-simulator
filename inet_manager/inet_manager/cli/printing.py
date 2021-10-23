@@ -1,6 +1,6 @@
 from tabulate import tabulate
-from autonomous_system import AS
-from server import Server
+from ..inet.autonomous_system import AS
+from ..inet.server import Server
 from dataclasses import asdict
 
 

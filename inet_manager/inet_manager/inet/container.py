@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-import docker_utils
+from ..util import docker_utils
 
 
 @dataclass
