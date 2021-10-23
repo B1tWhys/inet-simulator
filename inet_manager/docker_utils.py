@@ -21,17 +21,20 @@ def get_container_ip(container_id, as_name) -> str:
     return container.attrs['NetworkSettings']['Networks'][as_name]['IPAddress']
 
 
-def create_container(command, network_id, name=None, privileged=False, caps=None, environment=None):
+def create_container(command, network_id, name=None, privileged=False, caps=None, environment=None, ipv4_forwarding=False):
+    sysctls = {'net.ipv4.ip_forward': 1} if ipv4_forwarding else {}
     environment = environment if environment else {}
-    caps = caps if caps else []
+    caps = caps if caps else ['CAP_NET_ADMIN']
     container = client.containers.run(image='bgp-sandbox',
                                       name=name,
+                                      hostname=name,
                                       cap_add=caps,
                                       command=command,
                                       detach=True,
                                       environment=environment,
                                       network=network_id,
                                       privileged=privileged,
+                                      sysctls=sysctls,
                                       remove=True)
     return container.short_id
 

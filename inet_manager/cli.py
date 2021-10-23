@@ -25,12 +25,14 @@ class CLI:
             },
             'rm': {
                 'as': self.remove_as,
-                'server': self.remove_server
+                'server': self.remove_server,
+                'router': self.remove_router
             },
             'new': {
                 'internet': self.create_internet,
                 'server': self.create_server,
-                'as': self.create_as
+                'as': self.create_as,
+                'router': self.create_manual_router,
             },
             'ls': {
                 'as': self.list_autonomous_systems,
@@ -175,6 +177,22 @@ class CLI:
                 server = servers[0]
         server.as_.remove_server(server)
 
+    def create_manual_router(self, _):
+        as_ = self.select_as("select AS to create the router in: ")
+        if as_ is None:
+            print("You need to create an AS first")
+            return
+
+        existing_names = [r.name for r in as_.list_routers()]
+        name = self.prompt_for_new_name("enter name for new manually configured router: ",
+                                        existing_names)
+        as_.create_manual_router(name)
+
+    def remove_router(self, _):
+        router = self.select_router("select router to remove: ")
+        # FIXME: this doesn't work if the router is accurately in multiple AS's
+        router.as_list[0].remove_router(router)
+
     def select_as(self, message):
         choices = [(a.name, a) for a in self.inet.list_autonomous_systems()]
         if len(choices) == 0:
@@ -192,6 +210,16 @@ class CLI:
             return None
         elif len(choices) == 1:
             print("only 1 server exists. i assume you want that one")
+            return choices[0][1]
+        answer = inquirer.prompt([inquirer.List('s', message=message, choices=choices)])
+        return answer['s']
+
+    def select_router(self, message):
+        choices = [(s.name, s) for s in self.inet.get_all_routers()]
+        if len(choices) == 0:
+            return None
+        elif len(choices) == 1:
+            print("only 1 router exists. i assume you want that one")
             return choices[0][1]
         answer = inquirer.prompt([inquirer.List('s', message=message, choices=choices)])
         return answer['s']

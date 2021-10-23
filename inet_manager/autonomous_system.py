@@ -3,6 +3,7 @@ from ipaddress import IPv4Network
 import docker_utils
 import traceback
 from server import Server
+from iptables_router import ManuallyConfiguredRouter
 
 
 @dataclass
@@ -19,15 +20,13 @@ class AS:
         self.asn = asn
         self.docker_network_id = self._create_docker_network()
         self.servers = {}
+        self.routers = {}
 
     def _create_docker_network(self):
         return docker_utils.create_network(self.name, self.subnet)
 
     def cleanup_docker_network(self):
-        try:
-            docker_utils.remove_network(self.docker_network_id)
-        except docker_utils.DockerException:
-            traceback.print_exc()
+        docker_utils.remove_network(self.docker_network_id)
 
     def list_servers(self):
         return list(self.servers.values())
@@ -43,3 +42,15 @@ class AS:
 
     def get_server(self, srv_name):
         return self.servers[srv_name]
+
+    def create_manual_router(self, router_name):
+        router = ManuallyConfiguredRouter(router_name, self)
+        self.routers[router.name] = router
+        return router
+
+    def list_routers(self):
+        return list(self.routers.values())
+
+    def remove_router(self, router):
+        router.cleanup_container()
+        del self.routers[router.name]

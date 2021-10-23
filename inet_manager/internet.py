@@ -52,6 +52,9 @@ class Internet:
     def get_all_servers(self):
         return [s for a in self.list_autonomous_systems() for s in a.list_servers()]
 
+    def get_all_routers(self):
+        return [r for a in self.list_autonomous_systems() for r in a.list_routers()]
+
     def next_asn(self):
         current_asns = self._autonomous_systems.keys()
         if len(current_asns) == 0:

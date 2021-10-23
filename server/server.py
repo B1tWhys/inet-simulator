@@ -7,7 +7,7 @@ client_host = socket.gethostname()
 client_ip = socket.gethostbyname(client_host)
 logging_context = {'host': client_host, 'ip': client_ip}
 
-host = getenv('LISTEN_HOST', '')
+host = getenv('LISTEN_HOST', '0.0.0.0')
 port = int(getenv('PORT', '8000'))
 
 def connection_worker(sock, client_addr):

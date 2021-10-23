@@ -7,10 +7,9 @@ from ipaddress import IPv4Address
 
 @dataclass
 class Server(BaseContainer):
-    name: str
-    ip: IPv4Address
     port: int
     container_id: str
+    ip: IPv4Address
 
     def __init__(self, name, as_, port=8000):
         self.name = name
@@ -26,6 +25,3 @@ class Server(BaseContainer):
                                                   network_id=self.as_.docker_network_id,
                                                   environment=env)
         return container
-
-    def cleanup_container(self):
-        docker_utils.remove_container(self.container_id)
