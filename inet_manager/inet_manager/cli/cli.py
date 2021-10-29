@@ -7,6 +7,7 @@ from prompt_toolkit.shortcuts import clear
 import traceback
 from itertools import count
 import inquirer
+from . import commands
 
 from .printing import *
 
@@ -239,8 +240,7 @@ class CLI:
 
 
 def main():
-    cli = CLI()
-    cli.run()
+    commands.root()
 
 
 if __name__ == '__main__':
