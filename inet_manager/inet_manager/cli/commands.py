@@ -70,8 +70,15 @@ def rm():
 
 
 @rm.command("as")
-def rm_as():
-    raise NotImplementedError()
+@pass_inet
+def rm_as(inet):
+    choices = [(a.name, a) for a in inet.list_autonomous_systems()]
+    if len(choices) == 0:
+        print("There arent any as's to remove")
+        return
+    answer = inquirer.prompt([inquirer.List('as', message='select as to remove', choices=choices)])
+    as_ = answer['as']
+    inet.remove_as(as_)
 
 
 @rm.command("server")
