@@ -16,7 +16,7 @@ def get_prompt_history():
 
 
 def save_inet(inet: Internet):
-    print(f"saving to state file: {abspath(state_file_path)}")
+    print(f"saving to: {abspath(state_file_path)}")
     state = load_state()
     state[inet.name] = inet
     with open(state_file_path, 'w') as f:

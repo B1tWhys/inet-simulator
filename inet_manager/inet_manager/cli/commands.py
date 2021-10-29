@@ -1,5 +1,6 @@
 from ..util import docker_utils, storage
 from ..inet.internet import Internet
+from .printing import *
 
 from itertools import count
 import click
@@ -31,11 +32,16 @@ def new():
 
 
 @new.command("as")
+@click.argument("name", required=False)
 @pass_inet
-def new_as(inet: Internet):
+def new_as(inet: Internet, name: str):
     existing_names = {a.name for a in inet.list_autonomous_systems()}
-    default_name = f"as-{inet.next_asn()}"
-    name = prompt_for_new_name("enter name for new AS: ", existing_names, default=default_name)
+    if not name:
+        default_name = f"as-{inet.next_asn()}"
+        name = prompt_for_new_name("enter name for new AS: ", existing_names, default=default_name)
+    if name in existing_names:
+        print(f"{name} already exists. Chose another name")
+        return
     inet.create_as(name)
 
 
@@ -79,8 +85,9 @@ def ls():
 
 
 @ls.command("as")
-def ls_as():
-    raise NotImplementedError()
+@pass_inet
+def ls_as(inet: Internet):
+    print_as_table(inet.list_autonomous_systems())
 
 
 @ls.command("servers")
