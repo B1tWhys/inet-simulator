@@ -4,3 +4,4 @@ __pycache__
 history
 state.yaml
 *.egg-info
+state.yaml
