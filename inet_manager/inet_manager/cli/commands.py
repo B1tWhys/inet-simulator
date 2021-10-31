@@ -7,13 +7,15 @@ import click
 import inquirer
 
 pass_inet = click.make_pass_decorator(Internet, ensure=True)
+inet: Internet
 
 
 @click.group()
 @click.pass_context
-def root(ctx: click.Context):
-    ctx.obj = select_internet()
-    ctx.call_on_close(lambda: storage.save_inet(ctx.obj))
+def root(ctx):
+    global inet
+    inet = select_internet()
+    ctx.call_on_close(lambda: storage.save_inet(inet))
 
 
 @root.group("docker")
@@ -21,7 +23,7 @@ def docker():
     pass
 
 
-@docker.command("build")
+@docker.command("rebuild")
 def build():
     docker_utils.rebuild_imgs()
 
@@ -33,8 +35,7 @@ def new():
 
 @new.command("as")
 @click.argument("name", required=False)
-@pass_inet
-def new_as(inet: Internet, name: str):
+def new_as(name: str):
     existing_names = {a.name for a in inet.list_autonomous_systems()}
     if not name:
         default_name = f"as-{inet.next_asn()}"
@@ -46,9 +47,8 @@ def new_as(inet: Internet, name: str):
 
 
 @new.command("server")
-@pass_inet
-def new_server(inet: Internet):
-    as_ = select_as(inet, 'select as to create the server in: ')
+def new_server():
+    as_ = select_as('select as to create the server in: ')
     if as_ is None:
         print("You need to create an AS first")
         return
@@ -70,8 +70,7 @@ def rm():
 
 
 @rm.command("as")
-@pass_inet
-def rm_as(inet):
+def rm_as():
     choices = [(a.name, a) for a in inet.list_autonomous_systems()]
     if len(choices) == 0:
         print("There arent any as's to remove")
@@ -82,8 +81,17 @@ def rm_as(inet):
 
 
 @rm.command("server")
-def rm_server():
-    raise NotImplementedError()
+@click.argument("srv_name", required=False)
+def rm_server(srv_name):
+    if srv_name is None:
+        server = select_server("select server to remove: ")
+    else:
+        servers = inet.find_servers(srv_name)
+        if len(servers) > 1:
+            server = select_server("select server to remove: ")
+        else:
+            server = servers[0]
+    server.as_.remove_server(server)
 
 
 @root.group("ls")
@@ -92,14 +100,14 @@ def ls():
 
 
 @ls.command("as")
-@pass_inet
-def ls_as(inet: Internet):
+def ls_as():
     print_as_table(inet.list_autonomous_systems())
 
 
 @ls.command("servers")
 def ls_servers():
-    raise NotImplementedError()
+    servers = [s for a in inet.list_autonomous_systems() for s in a.list_servers()]
+    print_server_table(servers)
 
 
 def prompt_for_new_name(message, existing_names, default=None):
@@ -133,7 +141,7 @@ def select_internet():
         return storage.load_inet(answer['inet_name'])
 
 
-def select_as(inet, message):
+def select_as(message):
     choices = [(a.name, a) for a in inet.list_autonomous_systems()]
     if len(choices) == 0:
         return None
@@ -143,3 +151,14 @@ def select_as(inet, message):
     answer = inquirer.prompt([inquirer.List('as', message=message, choices=choices)])
     as_ = answer['as']
     return as_
+
+
+def select_server(message):
+    choices = [(s.name, s) for s in inet.get_all_servers()]
+    if len(choices) == 0:
+        return None
+    elif len(choices) == 1:
+        print("only 1 server exists. i assume you want that one")
+        return choices[0][1]
+    answer = inquirer.prompt([inquirer.List('s', message=message, choices=choices)])
+    return answer['s']

@@ -3,10 +3,10 @@ from ..inet.internet import Internet
 from os import makedirs
 from os.path import join, exists, abspath
 from prompt_toolkit.history import FileHistory
+from appdirs import user_data_dir
 
 app_name = 'inet_manager'
-# data_dir = user_data_dir(appname=app_name)
-data_dir = './'
+data_dir = user_data_dir(appname=app_name)
 state_file_path = join(data_dir, 'state.yaml')
 makedirs(data_dir, exist_ok=True)
 
@@ -16,7 +16,7 @@ def get_prompt_history():
 
 
 def save_inet(inet: Internet):
-    print(f"saving to: {abspath(state_file_path)}")
+    # print(f"saving to: {abspath(state_file_path)}")
     state = load_state()
     state[inet.name] = inet
     with open(state_file_path, 'w') as f:
