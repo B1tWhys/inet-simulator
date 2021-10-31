@@ -26,7 +26,6 @@ while True:
                 sock.send(msg.encode('ascii'))
                 resp = sock.recv(1024)
                 logging.info("received from %s: %s", host, resp.decode('ascii').strip(), extra=log_context)
-                sleep(1)
     except Exception as e:
         logging.info("failed to connect to server", exc_info=e, extra=log_context)
-        sleep(1)
+    sleep(1)
