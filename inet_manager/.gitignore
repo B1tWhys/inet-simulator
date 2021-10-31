@@ -1,0 +1,7 @@
+venv
+.idea
+__pycache__
+history
+state.yaml
+*.egg-info
+state.yaml

@@ -1,0 +1,7 @@
+#!/bin/bash -ex
+
+GATEWAY=$1
+DEVICE=${2:-eth0}
+
+ip route del default dev $DEVICE
+ip route add default via $GATEWAY dev $DEVICE
