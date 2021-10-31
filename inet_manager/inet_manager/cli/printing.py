@@ -13,7 +13,7 @@ def print_as_table(as_list: list[AS]):
     print(tabulate(records, headers='keys'))
 
 
-def print_server_table(srv_list: list[Server]):
+def print_container_table(srv_list: list[Server]):
     records = []
     for s in srv_list:
         s_d = asdict(s)

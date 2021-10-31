@@ -165,7 +165,7 @@ class CLI:
 
     def list_all_servers(self, _):
         servers = [s for a in self.inet.list_autonomous_systems() for s in a.list_servers()]
-        print_server_table(servers)
+        print_container_table(servers)
 
     def remove_server(self, srv_name):
         if srv_name is None:

@@ -8,7 +8,6 @@ from ipaddress import IPv4Address
 @dataclass
 class Server(BaseContainer):
     port: int
-    container_id: str
     ip: IPv4Address
 
     def __init__(self, name, as_, port=8000):

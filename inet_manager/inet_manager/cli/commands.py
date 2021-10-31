@@ -5,6 +5,7 @@ from .printing import *
 from itertools import count
 import click
 import inquirer
+from typing import Union
 
 pass_inet = click.make_pass_decorator(Internet, ensure=True)
 inet: Internet
@@ -48,7 +49,7 @@ def new_as(name: str):
 
 @new.command("server")
 def new_server():
-    as_ = select_as('select as to create the server in: ')
+    as_ = select_as('select AS to create the server in:')
     if as_ is None:
         print("You need to create an AS first")
         return
@@ -57,6 +58,21 @@ def new_server():
     default = gen_default_name(f'server{as_.asn}-', current_names)
     name = prompt_for_new_name("enter name for new server: ", existing_names=current_names, default=default)
     as_.create_server(name)
+
+
+@new.command("client")
+def new_client():
+    as_ = select_as('select AS to create client in:')
+    if as_ is None:
+        print("You need to create an AS first")
+        return
+    current_names = [s.name for s in as_.list_clients()]
+    server = select_server('select server for client to make requests to')
+    if server is None:
+        print("No servers exist for the client to make requests to. Create a server first!")
+    default = gen_default_name(f'client{as_.asn}-', current_names)
+    name = prompt_for_new_name("enter name for new client: ", existing_names=current_names, default=default)
+    as_.create_client(name, server)
 
 
 @new.command("router")
@@ -107,7 +123,13 @@ def ls_as():
 @ls.command("servers")
 def ls_servers():
     servers = [s for a in inet.list_autonomous_systems() for s in a.list_servers()]
-    print_server_table(servers)
+    print_container_table(servers)
+
+
+@ls.command("clients")
+def ls_clients():
+    clients = [c for a in inet.list_autonomous_systems() for c in a.list_clients()]
+    print_container_table(clients)
 
 
 def prompt_for_new_name(message, existing_names, default=None):
@@ -141,7 +163,7 @@ def select_internet():
         return storage.load_inet(answer['inet_name'])
 
 
-def select_as(message):
+def select_as(message) -> Union[AS, None]:
     choices = [(a.name, a) for a in inet.list_autonomous_systems()]
     if len(choices) == 0:
         return None
