@@ -14,9 +14,12 @@ inet: Internet
 @click.group()
 @click.pass_context
 def root(ctx):
+    def save():
+        if inet is not None:
+            storage.save_inet(inet)
     global inet
     inet = select_internet()
-    ctx.call_on_close(lambda: storage.save_inet(inet))
+    ctx.call_on_close(save)
 
 
 @root.group("docker")
@@ -70,6 +73,7 @@ def new_client():
     server = select_server('select server for client to make requests to')
     if server is None:
         print("No servers exist for the client to make requests to. Create a server first!")
+        exit(1)
     default = gen_default_name(f'client{as_.asn}-', current_names)
     name = prompt_for_new_name("enter name for new client: ", existing_names=current_names, default=default)
     as_.create_client(name, server)
@@ -108,6 +112,27 @@ def rm_server(srv_name):
         else:
             server = servers[0]
     server.as_.remove_server(server)
+
+
+@rm.command("client")
+@click.argument("client_name", required=False)
+def rm_client(client_name):
+    if client_name is None:
+        client = select_client("select client to remove: ")
+    else:
+        clients = inet.find_clients(client_name)
+        if len(clients) > 1:
+            client = select_client("select client to remove: ")
+        else:
+            client = clients[0]
+    client.as_.remove_client(client)
+
+
+@rm.command("state")
+def rm_state():
+    global inet
+    storage.rm_state()
+    inet = None
 
 
 @root.group("ls")
@@ -168,7 +193,7 @@ def select_as(message) -> Union[AS, None]:
     if len(choices) == 0:
         return None
     elif len(choices) == 1:
-        print("only one AS exists. I assume you want that one")
+        print(f"only one AS exists so I assume the one you want is {choices[0][0]}")
         return choices[0][1]
     answer = inquirer.prompt([inquirer.List('as', message=message, choices=choices)])
     as_ = answer['as']
@@ -180,7 +205,18 @@ def select_server(message):
     if len(choices) == 0:
         return None
     elif len(choices) == 1:
-        print("only 1 server exists. i assume you want that one")
+        print(f"Only 1 server exists so i assume the one you want is {choices[0][0]}")
         return choices[0][1]
     answer = inquirer.prompt([inquirer.List('s', message=message, choices=choices)])
     return answer['s']
+
+
+def select_client(message):
+    choices = [(c.name, c) for c in inet.get_all_clients()]
+    if len(choices) == 0:
+        return None
+    elif len(choices) == 1:
+        print(f"Only 1 client exists so I assume the one you want {choices[0][0]}")
+        return choices[0][1]
+    answer = inquirer.prompt([inquirer.List('c', message=message, choices=choices)])
+    return answer['c']

@@ -36,6 +36,15 @@ class Internet:
                 pass
         return ret
 
+    def find_clients(self, client_name):
+        ret = []
+        for a in self.list_autonomous_systems():
+            try:
+                ret.append(a.get_client(client_name))
+            except KeyError:
+                pass
+        return ret
+
     def _next_as_subnet(self):
         current_subnets = [a.subnet for a in self._autonomous_systems.values()]
         for new in self.subnet.subnets(prefixlen_diff=8):
@@ -52,6 +61,9 @@ class Internet:
     def get_all_servers(self):
         return [s for a in self.list_autonomous_systems() for s in a.list_servers()]
 
+    def get_all_clients(self):
+        return [c for a in self.list_autonomous_systems() for c in a.list_clients()]
+
     def get_all_routers(self):
         return [r for a in self.list_autonomous_systems() for r in a.list_routers()]
 
@@ -61,3 +73,5 @@ class Internet:
             return 1
         else:
             return max(current_asns) + 1
+
+

@@ -1,6 +1,6 @@
 import yaml
 from ..inet.internet import Internet
-from os import makedirs
+from os import makedirs, remove
 from os.path import join, exists, abspath
 from prompt_toolkit.history import FileHistory
 from appdirs import user_data_dir
@@ -16,7 +16,6 @@ def get_prompt_history():
 
 
 def save_inet(inet: Internet):
-    # print(f"saving to: {abspath(state_file_path)}")
     state = load_state()
     state[inet.name] = inet
     with open(state_file_path, 'w') as f:
@@ -41,3 +40,10 @@ def load_state() -> dict:
 
     with open(state_file_path, 'r') as f:
         return yaml.load(f, Loader=yaml.Loader)
+
+
+def rm_state():
+    try:
+        remove(state_file_path)
+    except FileNotFoundError:
+        pass

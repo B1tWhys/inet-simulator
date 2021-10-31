@@ -50,6 +50,10 @@ class AS:
         server.cleanup_container()
         del self.servers[server.name]
 
+    def remove_client(self, client):
+        client.cleanup_container()
+        del self.clients[client.name]
+
     def get_server(self, srv_name):
         return self.servers[srv_name]
 

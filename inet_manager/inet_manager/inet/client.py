@@ -9,10 +9,9 @@ from ..util import docker_utils
 @dataclass
 class Client(BaseContainer):
     target_server: Server
-    as_: object
     ip: IPv4Address
 
-    def __init__(self, name, as_, target_server):
+    def __init__(self, name, as_, target_server: Server):
         self.name = name
         self.as_ = as_
         self.target_server = target_server

@@ -9,3 +9,6 @@ class BaseContainer:
 
     def cleanup_container(self):
         docker_utils.remove_container(self.container_id)
+
+    def __repr__(self):
+        return self.name
