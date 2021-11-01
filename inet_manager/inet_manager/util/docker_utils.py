@@ -1,6 +1,8 @@
 import docker
 import docker.types
 import docker.errors
+from docker.models.networks import Network
+from docker.models.containers import Container
 from ipaddress import IPv4Network
 from ..inet.interface import Interface
 
@@ -11,13 +13,17 @@ class DockerException(Exception):
     pass
 
 
-def get_containers():
+def _safe_get_container(container_id) -> Container:
+    return client.containers.get(container_id)
+
+
+def get_containers() -> list[Container]:
     containers = client.containers.list()
     return containers
 
 
 def get_container_interfaces(container_id) -> list[Interface]:
-    container = client.containers.get(container_id)
+    container = _safe_get_container(container_id)
     container.reload()
     interfaces = []
     for name, net_info in container.attrs['NetworkSettings']['Networks'].items():
@@ -50,7 +56,7 @@ def create_container(command, network_name,
     return container.short_id
 
 
-def _find_network(network_name) -> docker.types.networks:
+def _find_network(network_name) -> Network:
     try:
         network = client.networks.list(network_name)[0]
     except IndexError:
@@ -81,6 +87,22 @@ def remove_network(id):
 
 def remove_container(container_id):
     try:
-        client.containers.get(container_id).remove(force=True)
+        _safe_get_container(container_id).remove(force=True)
     except docker.errors.DockerException as e:
         raise DockerException(e)
+
+
+def connect_container_to_network(container_id, network_name):
+    try:
+        net = _find_network(network_name)
+        net.connect(container_id)
+    except docker.errors.DockerException as e:
+        raise DockerException(e)
+
+
+def run_command(container_id, command):
+    container = _safe_get_container(container_id)
+    _, resp_stream = container.exec_run(command, stream=True)
+    for output in resp_stream:
+        print(output.decode('ascii'), end='')
+    print()

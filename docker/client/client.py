@@ -19,7 +19,7 @@ port = args.port
 logging.info("starting ping requests", extra=log_context)
 while True:
     try:
-        with socket.create_connection((host, port)) as sock:
+        with socket.create_connection((host, port), timeout=3) as sock:
             while True:
                 msg = f"ping from {client_ip}"
                 logging.info("sending to %s: %s", host, msg, extra=log_context)
