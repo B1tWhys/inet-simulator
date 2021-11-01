@@ -1,11 +1,12 @@
 from ..util import docker_utils, storage
 from ..inet.internet import Internet
 from .printing import *
+from ..inet.containers import *
 
 from itertools import count
 import click
 import inquirer
-from typing import Union
+from typing import *
 
 pass_inet = click.make_pass_decorator(Internet, ensure=True)
 inet: Internet
@@ -17,6 +18,7 @@ def root(ctx):
     def save():
         if inet is not None:
             storage.save_inet(inet)
+
     global inet
     inet = select_internet()
     ctx.call_on_close(save)
@@ -57,10 +59,10 @@ def new_server():
         print("You need to create an AS first")
         return
 
-    current_names = [s.name for s in as_.list_servers()]
+    current_names = [s.name for s in inet.list_containers(Server)]
     default = gen_default_name(f'server{as_.asn}-', current_names)
     name = prompt_for_new_name("enter name for new server: ", existing_names=current_names, default=default)
-    as_.create_server(name)
+    inet.create_server(name, as_)
 
 
 @new.command("client")
@@ -69,14 +71,14 @@ def new_client():
     if as_ is None:
         print("You need to create an AS first")
         return
-    current_names = [s.name for s in as_.list_clients()]
+    current_names = [s.name for s in inet.list_containers(Client)]
     server = select_server('select server for client to make requests to')
     if server is None:
         print("No servers exist for the client to make requests to. Create a server first!")
         exit(1)
     default = gen_default_name(f'client{as_.asn}-', current_names)
     name = prompt_for_new_name("enter name for new client: ", existing_names=current_names, default=default)
-    as_.create_client(name, server)
+    inet.create_client(name, as_, server)
 
 
 @new.command("router")
@@ -100,32 +102,30 @@ def rm_as():
     inet.remove_as(as_)
 
 
-@rm.command("server")
-@click.argument("srv_name", required=False)
-def rm_server(srv_name):
+@rm.command("container")
+@click.argument("container_name", required=False)
+def rm_container(srv_name):
     if srv_name is None:
-        server = select_server("select server to remove: ")
+        container = select_server("select container to remove: ")
     else:
-        servers = inet.find_servers(srv_name)
-        if len(servers) > 1:
-            server = select_server("select server to remove: ")
-        else:
-            server = servers[0]
-    server.as_.remove_server(server)
+        container = inet.find_server(srv_name)
+        if container is None:
+            print(f"Server {srv_name} not found!")
+            exit(1)
+    inet.remove_container(container)
 
 
 @rm.command("client")
 @click.argument("client_name", required=False)
 def rm_client(client_name):
     if client_name is None:
-        client = select_client("select client to remove: ")
+        client = select_client("Select client to remove: ")
     else:
-        clients = inet.find_clients(client_name)
-        if len(clients) > 1:
-            client = select_client("select client to remove: ")
-        else:
-            client = clients[0]
-    client.as_.remove_client(client)
+        client = inet.find_client(client_name)
+        if client is None:
+            print(f"Client {client} not found!")
+            exit(1)
+    inet.remove_container(client)
 
 
 @rm.command("state")
@@ -147,14 +147,14 @@ def ls_as():
 
 @ls.command("servers")
 def ls_servers():
-    servers = [s for a in inet.list_autonomous_systems() for s in a.list_servers()]
-    print_container_table(servers)
+    servers = inet.list_containers(Server)
+    print_single_interface_container_table(servers)
 
 
 @ls.command("clients")
 def ls_clients():
-    clients = [c for a in inet.list_autonomous_systems() for c in a.list_clients()]
-    print_container_table(clients)
+    clients = inet.list_containers(Client)
+    print_single_interface_container_table(clients)
 
 
 def prompt_for_new_name(message, existing_names, default=None):
@@ -200,23 +200,36 @@ def select_as(message) -> Union[AS, None]:
     return as_
 
 
-def select_server(message):
-    choices = [(s.name, s) for s in inet.get_all_servers()]
+def select_container(message, container_type):
+    choices = [(c.name, c) for c in inet.list_containers(container_type=container_type)]
     if len(choices) == 0:
         return None
     elif len(choices) == 1:
-        print(f"Only 1 server exists so i assume the one you want is {choices[0][0]}")
-        return choices[0][1]
-    answer = inquirer.prompt([inquirer.List('s', message=message, choices=choices)])
-    return answer['s']
-
-
-def select_client(message):
-    choices = [(c.name, c) for c in inet.get_all_clients()]
-    if len(choices) == 0:
-        return None
-    elif len(choices) == 1:
-        print(f"Only 1 client exists so I assume the one you want {choices[0][0]}")
+        print(f"Only 1 {container_type.__name__} exists so i assume the one you want is {choices[0][0]}")
         return choices[0][1]
     answer = inquirer.prompt([inquirer.List('c', message=message, choices=choices)])
     return answer['c']
+
+
+def select_server(message):
+    return select_container(message, Server)
+    # choices = [(s.name, s) for s in inet.get_all_servers()]
+    # if len(choices) == 0:
+    #     return None
+    # elif len(choices) == 1:
+    #     print(f"Only 1 server exists so i assume the one you want is {choices[0][0]}")
+    #     return choices[0][1]
+    # answer = inquirer.prompt([inquirer.List('s', message=message, choices=choices)])
+    # return answer['s']
+
+
+def select_client(message):
+    return select_container(message, Client)
+    # choices = [(c.name, c) for c in inet.get_all_clients()]
+    # if len(choices) == 0:
+    #     return None
+    # elif len(choices) == 1:
+    #     print(f"Only 1 client exists so I assume the one you want {choices[0][0]}")
+    #     return choices[0][1]
+    # answer = inquirer.prompt([inquirer.List('c', message=message, choices=choices)])
+    # return answer['c']

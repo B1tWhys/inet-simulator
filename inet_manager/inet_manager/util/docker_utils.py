@@ -2,6 +2,7 @@ import docker
 import docker.types
 import docker.errors
 from ipaddress import IPv4Network
+from ..inet.interface import Interface
 
 client = docker.from_env()
 
@@ -15,13 +16,17 @@ def get_containers():
     return containers
 
 
-def get_container_ip(container_id, as_name) -> str:
+def get_container_interfaces(container_id) -> list[Interface]:
     container = client.containers.get(container_id)
     container.reload()
-    return container.attrs['NetworkSettings']['Networks'][as_name]['IPAddress']
+    interfaces = []
+    for name, net_info in container.attrs['NetworkSettings']['Networks'].items():
+        interface = Interface(name, net_info['IPAddress'], net_info['IPPrefixLen'])
+        interfaces.append(interface)
+    return interfaces
 
 
-def create_container(command, network_id,
+def create_container(command, network_name,
                      name=None,
                      privileged=False,
                      caps=None,
@@ -30,6 +35,7 @@ def create_container(command, network_id,
     sysctls = {'net.ipv4.ip_forward': 1} if ipv4_forwarding else {}
     environment = environment if environment else {}
     caps = caps if caps else ['CAP_NET_ADMIN']
+    network_id = _find_network(network_name).id
     container = client.containers.run(image='bgp-sandbox',
                                       name=name,
                                       hostname=name,
@@ -42,6 +48,14 @@ def create_container(command, network_id,
                                       sysctls=sysctls,
                                       remove=True)
     return container.short_id
+
+
+def _find_network(network_name) -> docker.types.networks:
+    try:
+        network = client.networks.list(network_name)[0]
+    except IndexError:
+        raise DockerException(f"Network {network_name} not found")
+    return network
 
 
 def rebuild_imgs():

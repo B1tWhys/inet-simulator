@@ -1,23 +1,27 @@
 from dataclasses import dataclass, field
-from datetime import datetime
-from . import autonomous_system
+from .autonomous_system import AS
 from ipaddress import IPv4Network
+from .containers import Container, Server, Client
+from typing import Type, Union
+
+
+class NamingConflictException(Exception):
+    pass
 
 
 @dataclass
 class Internet:
     name: str
-    _autonomous_systems: dict[int, autonomous_system.AS] = field(default_factory=dict)
-    created_ts: datetime = datetime.now()
-    last_modified_ts: datetime = datetime.now()
+    _autonomous_systems: dict[int, AS] = field(default_factory=dict)
     subnet: IPv4Network = field(default_factory=lambda: IPv4Network('172.0.0.0/8'))
+    containers: dict[str, Container] = field(default_factory=dict)
 
     def create_as(self, name: str):
-        as_ = autonomous_system.AS(name, self.next_asn(), self._next_as_subnet())
+        as_ = AS(name, self.next_asn(), self._next_as_subnet())
         self._autonomous_systems[as_.asn] = as_
         return as_
 
-    def remove_as(self, as_: autonomous_system.AS):
+    def remove_as(self, as_: AS):
         as_.cleanup_docker_network()
         del self._autonomous_systems[as_.asn]
 
@@ -27,23 +31,36 @@ class Internet:
     def get_as(self, asn):
         return self._autonomous_systems[asn]
 
-    def find_servers(self, srv_name):
-        ret = []
-        for a in self.list_autonomous_systems():
-            try:
-                ret.append(a.get_server(srv_name))
-            except KeyError:
-                pass
-        return ret
+    def list_containers(self, container_type: Type[Container] = Container):
+        return [c for c in self.containers.values() if isinstance(c, container_type)]
 
-    def find_clients(self, client_name):
-        ret = []
-        for a in self.list_autonomous_systems():
-            try:
-                ret.append(a.get_client(client_name))
-            except KeyError:
-                pass
-        return ret
+    def find_container(self, container_name) -> Union[Container, None]:
+        return self.containers.get(container_name, None)
+
+    def remove_container(self, container: Container):
+        container.cleanup_container()
+        del self.containers[container.name]
+
+    def create_server(self, srv_name: str, as_: AS):
+        if srv_name in self.containers:
+            raise NamingConflictException(f"Server name: {srv_name} is already taken by another container")
+        server = Server(srv_name, as_.name)
+        self.containers[srv_name] = server
+
+    def find_server(self, srv_name) -> Union[Server, None]:
+        container = self.find_container(srv_name)
+        return container if isinstance(container, Server) else None
+
+    def create_client(self, client_name: str, as_: AS, server: Server):
+        if client_name in self.containers:
+            raise NamingConflictException(f"Client name: {client_name} is already taken by another container")
+        client = Client(client_name, as_.name)
+        self.containers[client_name] = client
+        return client
+
+    def find_client(self, client_name):
+        container = self.find_container(client_name)
+        return container if isinstance(container, Client) else None
 
     def _next_as_subnet(self):
         current_subnets = [a.subnet for a in self._autonomous_systems.values()]
@@ -73,5 +90,3 @@ class Internet:
             return 1
         else:
             return max(current_asns) + 1
-
-
