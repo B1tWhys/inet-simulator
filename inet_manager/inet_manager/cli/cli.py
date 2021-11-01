@@ -83,7 +83,21 @@ def new_client():
 
 @new.command("router")
 def new_router():
-    raise NotImplementedError()
+    # TODO: once multiple types of routers are supported, prompt the user for the router type
+    _new_manual_router()
+
+
+def _new_manual_router():
+    all_as_names = [a.name for a in inet.list_autonomous_systems()]
+    current_names = [c.name for c in inet.list_containers()]
+    default_name = _gen_default_name(f'router-', current_names)
+    as_names = inquirer.prompt([
+        inquirer.Checkbox('as',
+                          message="which as's should this router be attached to? "
+                                  "(Select at least 1, you can attach more later)",
+                          choices=all_as_names)])['as']
+    name = _prompt_for_new_name("enter name for new router: ", existing_names=current_names, default=default_name)
+    inet.create_manual_router(name, as_names)
 
 
 @root.group("rm")
@@ -102,11 +116,11 @@ def rm_as():
     inet.remove_as(as_)
 
 
-@rm.command("container")
-@click.argument("container_name", required=False)
+@rm.command("server")
+@click.argument("srv_name", required=False)
 def rm_container(srv_name):
     if srv_name is None:
-        container = _select_server("select container to remove: ")
+        container = _select_server("select server to remove: ")
     else:
         container = inet.find_server(srv_name)
         if container is None:
@@ -126,6 +140,19 @@ def rm_client(client_name):
             print(f"Client {client} not found!")
             exit(1)
     inet.remove_container(client)
+
+
+@rm.command("router")
+@click.argument("router_name", required=False)
+def rm_router(router_name):
+    if router_name is None:
+        router = _select_container("Select router to remove: ", Router)
+    else:
+        router = inet.find_router(router_name)
+        if router is None:
+            print(f"Router {router} not found!")
+            exit(1)
+    inet.remove_container(router)
 
 
 @rm.command("state")
@@ -155,6 +182,36 @@ def ls_servers():
 def ls_clients():
     clients = inet.list_containers(Client)
     print_single_interface_container_table(clients)
+
+
+@ls.command("routers")
+def ls_routers():
+    routers = inet.list_containers(Router)
+    print(routers)
+
+
+@root.group("configure")
+def configure():
+    pass
+
+
+@configure.command("default-route")
+@click.argument("container-name")
+@click.argument("gateway-name")
+def configure_default_route(container_name, gateway_name):
+    container = inet.find_container(container_name)
+    if container is None:
+        print(f"Container {container_name} not found!")
+        exit(1)
+    elif not isinstance(container, SingleInterfaceContainer):
+        print(f"Cannot configure default route on a router!")
+        exit(1)
+    gateway = inet.find_router(gateway_name)
+    if gateway is None:
+        print(f"Router {gateway_name} not found!")
+        exit(1)
+
+    container.configure_default_gateway(gateway)
 
 
 def _prompt_for_new_name(message, existing_names, default=None):

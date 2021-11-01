@@ -4,6 +4,10 @@ from ..util import docker_utils
 from .interface import Interface
 
 
+class InvalidContainerConfigurationException(Exception):
+    pass
+
+
 @dataclass
 class Container:
     container_id: str
@@ -13,8 +17,34 @@ class Container:
     def cleanup_container(self):
         docker_utils.remove_container(self.container_id)
 
+    def run(self, command):
+        docker_utils.run_command(self.container_id, command)
+
     def __repr__(self):
         return self.name
+
+
+@dataclass
+class Router(Container):
+    pass
+
+
+@dataclass
+class ManualRouter(Router):
+    def __init__(self, name, as_names: list[str]):
+        self.name = name
+        if len(as_names) == 0:
+            raise InvalidContainerConfigurationException("Must specify at least 1 AS for a router to get created in")
+        self.container_id = self._init_container(as_names[0])
+        for as_name in as_names[1:]:
+            docker_utils.connect_container_to_network(self.container_id, as_name)
+        self.interfaces = docker_utils.get_container_interfaces(self.container_id)
+
+    def _init_container(self, initial_net_name):
+        return docker_utils.create_container('sleep infinity',
+                                             name=self.name,
+                                             network_name=initial_net_name,
+                                             ipv4_forwarding=True)
 
 
 @dataclass
@@ -30,6 +60,19 @@ class SingleInterfaceContainer(Container):
     @property
     def as_name(self):
         return self.interface.as_name
+
+    def configure_default_gateway(self, gateway_router: Router):
+        for interface in gateway_router.interfaces:
+            if self.interface.ip_interface.ip in interface.network:
+                gateway_ip = interface.ip
+                break
+        else:
+            err = f"Router {gateway_router.name} does not have an interface containing this container's IP address, " \
+                  f"so it cannot be used as the default gateway"
+            raise InvalidContainerConfigurationException(err)
+        print(f"setting default gateway to: {gateway_ip}")
+        self.run(f"set_gateway {gateway_ip}")
+
 
 
 @dataclass
@@ -63,23 +106,9 @@ class Client(SingleInterfaceContainer):
 
     def _init_container(self, network_name):
         cmd = f'python3 ./client/client.py ' \
-              f'--host "{self.target_server.ip.compressed}" ' \
+              f'--host "{self.target_server.ip}" ' \
               f'--port "{self.target_server.port}"'
         container = docker_utils.create_container(cmd,
                                                   name=self.name,
                                                   network_name=network_name)
         return container
-
-
-@dataclass
-class ManuallyConfiguredRouter(Container):
-    def __init__(self, name, as_):
-        self.name = name
-        self.as_list = [as_]
-        self.container_id = self._init_container()
-
-    def _init_container(self):
-        return docker_utils.create_container('sleep infinity',
-                                             name=self.name,
-                                             network_id=self.as_list[0].docker_network_id,
-                                             ipv4_forwarding=True)

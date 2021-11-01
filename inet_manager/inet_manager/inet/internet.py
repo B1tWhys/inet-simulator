@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from .autonomous_system import AS
 from ipaddress import IPv4Network
-from .containers import Container, Server, Client
+from .containers import Container, Server, Client, ManualRouter, Router
 from typing import Type, Union
 
 
@@ -54,13 +54,23 @@ class Internet:
     def create_client(self, client_name: str, as_: AS, server: Server):
         if client_name in self.containers:
             raise NamingConflictException(f"Client name: {client_name} is already taken by another container")
-        client = Client(client_name, as_.name)
+        client = Client(client_name, as_.name, server)
         self.containers[client_name] = client
         return client
 
     def find_client(self, client_name):
         container = self.find_container(client_name)
         return container if isinstance(container, Client) else None
+
+    def create_manual_router(self, name, as_names):
+        if name in self.containers:
+            raise NamingConflictException(f"Router name: {name} is already taken by another container")
+        router = ManualRouter(name, as_names)
+        self.containers[name] = router
+
+    def find_router(self, router_name):
+        router = self.find_container(router_name)
+        return router if isinstance(router, Router) else None
 
     def _next_as_subnet(self):
         current_subnets = [a.subnet for a in self._autonomous_systems.values()]
@@ -90,3 +100,4 @@ class Internet:
             return 1
         else:
             return max(current_asns) + 1
+
